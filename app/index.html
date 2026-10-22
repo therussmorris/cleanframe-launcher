@@ -5,7 +5,8 @@
 <div style="font-size:48px;margin-bottom:32px">CleanFrame Launcher</div>
 <div id="svc">Checking launcher service…</div>
 <div id="tb" style="color:#999"></div>
-<div style="margin-top:48px;font-size:28px;color:#999">Press Back to return. This page re-checks every 2 seconds.</div>
+<div id="test" style="margin-top:40px;font-size:34px">Press OK to test-launch BBC iPlayer through the service.</div>
+<div style="margin-top:48px;font-size:28px;color:#999">Press Back to return. The checks above repeat every 2 seconds.</div>
 <script>
 function check(url, el, label) {
   var x = new XMLHttpRequest();
@@ -20,4 +21,14 @@ function run() {
   check('http://127.0.0.1:8081/', document.getElementById('tb'), 'TizenBrew (port 8081)');
 }
 run(); setInterval(run, 2000);
+document.addEventListener('keydown', function (e) {
+  if (e.keyCode !== 13) return;
+  var el = document.getElementById('test'), x = new XMLHttpRequest();
+  el.textContent = 'Launching…'; el.style.color = '#eee';
+  x.timeout = 10000;
+  x.onload = function () { el.textContent = 'Launch reply HTTP ' + x.status + ': ' + String(x.responseText).slice(0, 300); el.style.color = x.status === 200 ? '#7be07b' : '#ffb454'; };
+  x.onerror = function () { el.textContent = 'Launch: no response'; el.style.color = '#ff6b6b'; };
+  x.ontimeout = function () { el.textContent = 'Launch: timed out'; el.style.color = '#ff6b6b'; };
+  x.open('GET', 'http://127.0.0.1:8082/launch?id=DqEoaplKlw.bbchybrid', true); x.send();
+});
 </script>
