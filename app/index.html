@@ -1,5 +1,23 @@
 <!doctype html>
 <meta charset="utf-8">
 <title>CleanFrame Launcher</title>
-<body style="margin:0;background:#111;color:#eee;font:32px sans-serif;display:flex;align-items:center;justify-content:center;height:100vh">
-CleanFrame Launcher service is running. Press Back to return.
+<body style="margin:0;background:#111;color:#eee;font:36px/1.5 sans-serif;padding:80px">
+<div style="font-size:48px;margin-bottom:32px">CleanFrame Launcher</div>
+<div id="svc">Checking launcher service…</div>
+<div id="tb" style="color:#999"></div>
+<div style="margin-top:48px;font-size:28px;color:#999">Press Back to return. This page re-checks every 2 seconds.</div>
+<script>
+function check(url, el, label) {
+  var x = new XMLHttpRequest();
+  x.timeout = 1500;
+  x.onload = function () { el.textContent = label + ': answered (HTTP ' + x.status + ') ' + String(x.responseText).slice(0, 120); el.style.color = x.status === 200 ? '#7be07b' : '#ffb454'; };
+  x.onerror = function () { el.textContent = label + ': no response'; el.style.color = '#ff6b6b'; };
+  x.ontimeout = function () { el.textContent = label + ': timed out'; el.style.color = '#ff6b6b'; };
+  try { x.open('GET', url, true); x.send(); } catch (e) { el.textContent = label + ': ' + e.message; }
+}
+function run() {
+  check('http://127.0.0.1:8082/ping', document.getElementById('svc'), 'Launcher service (port 8082)');
+  check('http://127.0.0.1:8081/', document.getElementById('tb'), 'TizenBrew (port 8081)');
+}
+run(); setInterval(run, 2000);
+</script>

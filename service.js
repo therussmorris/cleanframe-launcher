@@ -9,14 +9,22 @@
  * Plain ES5 on purpose: the Node runtime on older Tizen TVs is old.
  */
 (function () {
+  /* TizenBrew runs this in a vm sandbox, where globals such as Buffer and setTimeout may be missing; use Node's own modules. */
   var net = require('net');
   var http = require('http');
+  var Buffer = require('buffer').Buffer;
+  var timers = require('timers');
+  var setTimeout = timers.setTimeout, clearTimeout = timers.clearTimeout;
+  var log = (typeof console !== 'undefined' && console.log) ? function (m) { console.log(m); } : function () {};
+  var initError = null;
   var PORT = 8082, SDB_PORT = 26101, SDB_HOST = (typeof process !== 'undefined' && process.env && process.env.CF_SDB_HOST) || '127.0.0.1', ID_PATTERN = /^[A-Za-z0-9._-]{1,64}$/;
 
   function buf(n) { return Buffer.alloc ? Buffer.alloc(n) : new Buffer(n); }
   function fromString(s) { return Buffer.from && Buffer.from !== Uint8Array.from ? Buffer.from(s) : new Buffer(s); }
   function cmd(name) { return fromString(name).readUInt32LE(0); }
-  var CNXN = cmd('CNXN'), OPEN = cmd('OPEN'), OKAY = cmd('OKAY'), WRTE = cmd('WRTE'), CLSE = cmd('CLSE');
+  var CNXN, OPEN, OKAY, WRTE, CLSE;
+  try { CNXN = cmd('CNXN'); OPEN = cmd('OPEN'); OKAY = cmd('OKAY'); WRTE = cmd('WRTE'); CLSE = cmd('CLSE'); }
+  catch (err) { initError = 'init: ' + (err && err.message); }
 
   function sum(data) { var r = 0, i; for (i = 0; i < data.length; i++) r = (r + data[i]) >>> 0; return r; }
   function packet(command, arg0, arg1, text) {
@@ -65,16 +73,17 @@
   var server = http.createServer(function (req, res) {
     var url = req.url || '', m;
     if (req.method === 'OPTIONS') { reply(res, 204, {}); return; }
-    if (url.indexOf('/ping') === 0) { reply(res, 200, { ok: true }); return; }
+    if (url.indexOf('/ping') === 0) { reply(res, 200, { ok: !initError, error: initError, node: (typeof process !== 'undefined' && process.version) || '' }); return; }
+    if (initError) { reply(res, 500, { ok: false, error: initError }); return; }
     m = /^\/launch\?id=([^&]*)/.exec(url);
     if (!m) { reply(res, 404, { ok: false, error: 'Unknown request' }); return; }
     var id = decodeURIComponent(m[1]);
     if (!ID_PATTERN.test(id)) { reply(res, 400, { ok: false, error: 'Invalid app id' }); return; }
-    shell('0 was_execute ' + id, function (err, out) {
+    try { shell('0 was_execute ' + id, function (err, out) {
       if (err) { reply(res, 502, { ok: false, error: String(err.message || err) }); return; }
       reply(res, out.indexOf('launched') >= 0 ? 200 : 502, { ok: out.indexOf('launched') >= 0, output: out });
-    });
+    }); } catch (err) { reply(res, 500, { ok: false, error: 'launch: ' + (err && err.message) }); }
   });
-  server.on('error', function (err) { console.log('CleanFrame launcher: ' + (err && err.message)); });
-  server.listen(PORT, '127.0.0.1', function () { console.log('CleanFrame launcher listening on 127.0.0.1:' + PORT); });
+  server.on('error', function (err) { log('CleanFrame launcher: ' + (err && err.message)); });
+  server.listen(PORT, '127.0.0.1', function () { log('CleanFrame launcher listening on 127.0.0.1:' + PORT); });
 })();
