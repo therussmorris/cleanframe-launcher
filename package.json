@@ -1,0 +1,11 @@
+{
+  "name": "cleanframe-launcher",
+  "version": "0.1.0",
+  "description": "Local launcher service for CleanFrame: starts TV apps the way sdb does, for apps Tizen ignores when launched from a web app.",
+  "packageType": "app",
+  "appName": "CleanFrame Launcher",
+  "appPath": "app/index.html",
+  "serviceFile": "service.js",
+  "keys": [],
+  "license": "MIT"
+}
